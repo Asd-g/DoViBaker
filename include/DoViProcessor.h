@@ -6,7 +6,10 @@
 
 #include "rpu_parser.h"
 #include <vector>
+#ifdef _WIN32
 #include <windows.h>
+#endif
+#include <math.h>
 
 typedef DoviRpuOpaqueList* (*f_dovi_parse_rpu_bin_file)(const char* path);
 typedef void (*f_dovi_rpu_list_free)(DoviRpuOpaqueList* ptr);
@@ -77,7 +80,11 @@ private:
   int16_t nonLinearInverseQuantization(int cmp, uint16_t sample) const;
   uint16_t signalReconstruction(uint16_t v, int16_t r) const;
 
+  #ifdef __linux__
+  void *doviLib;
+  #else
   HINSTANCE doviLib;
+  #endif
   DoviRpuOpaqueList* rpus;
 
   f_dovi_parse_rpu_bin_file dovi_parse_rpu_bin_file;
@@ -139,14 +146,14 @@ uint16_t DoViProcessor::pq2nits(uint16_t pq)
   static const float c1 = c3 - c2 + 1;
   const float relPq = pq / 4095.0;
   const float epower = powf(relPq, 1 / m2);
-  const float num = max(epower - c1, 0);
+  const float num = (((epower - c1) > (0)) ? (epower - c1) : (0));
   const float denom = c2 - c3 * epower;
   return powf(num / denom, 1 / m1) * 10000;
 }
 
 constexpr uint16_t DoViProcessor::Clip3(uint16_t lower, uint16_t upper, int value)
 {
-  return max(min(value, upper), lower);
+  return ((((((value) < (upper)) ? (value) : (upper))) > (lower)) ? ((((value) < (upper)) ? (value) : (upper))) : (lower));
 }
 
 /*
@@ -225,13 +232,13 @@ constexpr uint16_t DoViProcessor::upsampleElYvertOdd(const uint16_t* y, int n)
 constexpr uint16_t DoViProcessor::upsampleElUVvertEven(const uint16_t* y, int n)
 {
   auto val = (64 * y[n - 1] + 192 * y[n] + 128) >> 8;
-  return min(0xFFFF, val);
+  return std::min(0xFFFF, val);
 }
 
 constexpr uint16_t DoViProcessor::upsampleElUVvertOdd(const uint16_t* y, int n)
 {
   auto val = (192 * y[n] + 64 * y[n + 1] + 128) >> 8;
-  return min(0xFFFF, val);
+  return std::min(0xFFFF, val);
 }
 */
 

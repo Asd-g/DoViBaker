@@ -20,17 +20,37 @@ DoViProcessor::DoViProcessor(const char* rpuPath, IScriptEnvironment* env)
 	ycc_to_rgb_offset[1] = (1 << (containerBitDepth - 1)) << ycc_to_rgb_offset_scale_shifts;
 	ycc_to_rgb_offset[2] = (1 << (containerBitDepth - 1)) << ycc_to_rgb_offset_scale_shifts;
 
+	#if __linux__
+	doviLib = dlopen(L"libdovi.so");
+	#else
 	doviLib = ::LoadLibrary(L"dovi.dll"); // delayed loading, original name
+	#endif
 	if (doviLib == NULL) {
 		showMessage("DoViBaker: Cannot load dovi.dll", env);
 		return;
 	}
 
+	#if __linux__
+	dovi_parse_rpu_bin_file = (f_dovi_parse_rpu_bin_file)dlsym(doviLib, "dovi_parse_rpu_bin_file");
+	#else
 	dovi_parse_rpu_bin_file = (f_dovi_parse_rpu_bin_file)GetProcAddress(doviLib, "dovi_parse_rpu_bin_file");
+	#endif
+
 	if (dovi_parse_rpu_bin_file == NULL) {
 		showMessage("DoViBaker: Cannot load function dovi_parse_rpu_bin_file", env);
 		return;
 	}
+	#if __linux__
+	dovi_rpu_list_free = (f_dovi_rpu_list_free)dlsym(doviLib, "dovi_rpu_list_free");
+	dovi_rpu_get_header = (f_dovi_rpu_get_header)dlsym(doviLib, "dovi_rpu_get_header");
+	dovi_rpu_free_header = (f_dovi_rpu_free_header)dlsym(doviLib, "dovi_rpu_free_header");
+	dovi_rpu_get_data_nlq = (f_dovi_rpu_get_data_nlq)dlsym(doviLib, "dovi_rpu_get_data_nlq");
+	dovi_rpu_free_data_nlq = (f_dovi_rpu_free_data_nlq)dlsym(doviLib, "dovi_rpu_free_data_nlq");
+	dovi_rpu_get_vdr_dm_data = (f_dovi_rpu_get_vdr_dm_data)dlsym(doviLib, "dovi_rpu_get_vdr_dm_data");
+	dovi_rpu_free_vdr_dm_data = (f_dovi_rpu_free_vdr_dm_data)dlsym(doviLib, "dovi_rpu_free_vdr_dm_data");
+	dovi_rpu_get_data_mapping = (f_dovi_rpu_get_data_mapping)dlsym(doviLib, "dovi_rpu_get_data_mapping");
+	dovi_rpu_free_data_mapping = (f_dovi_rpu_free_data_mapping)dlsym(doviLib, "dovi_rpu_free_data_mapping");
+	#else
 	dovi_rpu_list_free = (f_dovi_rpu_list_free)GetProcAddress(doviLib, "dovi_rpu_list_free");
 	dovi_rpu_get_header = (f_dovi_rpu_get_header)GetProcAddress(doviLib, "dovi_rpu_get_header");
 	dovi_rpu_free_header = (f_dovi_rpu_free_header)GetProcAddress(doviLib, "dovi_rpu_free_header");
@@ -40,6 +60,7 @@ DoViProcessor::DoViProcessor(const char* rpuPath, IScriptEnvironment* env)
 	dovi_rpu_free_vdr_dm_data = (f_dovi_rpu_free_vdr_dm_data)GetProcAddress(doviLib, "dovi_rpu_free_vdr_dm_data");
 	dovi_rpu_get_data_mapping = (f_dovi_rpu_get_data_mapping)GetProcAddress(doviLib, "dovi_rpu_get_data_mapping");
 	dovi_rpu_free_data_mapping = (f_dovi_rpu_free_data_mapping)GetProcAddress(doviLib, "dovi_rpu_free_data_mapping");
+	#endif
 
 	rpus = dovi_parse_rpu_bin_file(rpuPath);
 	if (rpus->error) {
@@ -63,7 +84,11 @@ DoViProcessor::DoViProcessor(const char* rpuPath, IScriptEnvironment* env)
 DoViProcessor::~DoViProcessor()
 {
 	dovi_rpu_list_free(rpus);
+	#if __linux__
+	dlclose(doviLib);
+	#else
 	::FreeLibrary(doviLib);
+	#endif
 }
 
 void DoViProcessor::showMessage(const char* message, IScriptEnvironment* env)

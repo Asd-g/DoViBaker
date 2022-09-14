@@ -1,8 +1,24 @@
-#include "DoViBaker.h"
-#include "cube.h"
+#include "../include/DoViBaker.h"
+#include "../include/cube.h"
 
 #include <array>
-#include <io.h>
+#ifdef _WIN32
+	#include <io.h>
+#elif __linux__
+	#include <inttypes.h>
+	#include <stdlib.h>
+	#include <unistd.h>
+	#include <algorithm>
+	#include <bits/stdc++.h>
+	#define _aligned_malloc(size, alignment) aligned_alloc(alignment, size)
+	#ifndef min
+		#define min(a,b) (((a) < (b)) ? (a) : (b))
+	#endif
+
+	#ifndef max
+		#define max(a,b) (((a) > (b)) ? (a) : (b))
+	#endif
+#endif
 
 //////////////////////////////
 // Code
@@ -46,9 +62,15 @@ DoViBaker<quarterResolutionEl>::DoViBaker(
 
 	for (int i = 0; i < _cubes.size(); i++) {
 		auto cube_path = _cubes[i].second;
+		#ifdef __linux__
+		if (access(cube_path.c_str(), F_OK) == 0) {
+			env->ThrowError((std::string("DoViBaker: cannot open cube file ")+cube_path).c_str());
+		}
+		#else
 		if (_access(cube_path.c_str(), 0)) {
 			env->ThrowError((std::string("DoViBaker: cannot open cube file ")+cube_path).c_str());
 		}
+		#endif
 		timecube::Cube cube = timecube::read_cube_from_file(cube_path.c_str());
 		luts.push_back(std::pair(_cubes[i].first, timecube::create_lut_impl(cube, lutMaxCpuCaps)));
 	}
@@ -525,7 +547,11 @@ void DoViBaker<quarterResolutionEl>::applyLut(PVideoFrame& dst, const PVideoFram
 	unsigned int width = vi.width;
 	unsigned int height = vi.height;
 
-	std::unique_ptr<float, decltype(&_aligned_free)> tmp_buf{ nullptr, _aligned_free };
+	#ifdef __linux__
+		std::unique_ptr<float, decltype(&free)> tmp_buf{ nullptr, free };
+	#else
+		std::unique_ptr<float, decltype(&_aligned_free)> tmp_buf{ nullptr, _aligned_free };
+	#endif
 	unsigned aligned_width = width % 8 ? (width - width % 8) + 8 : width;
 
 	const uint16_t* src_p[3];
