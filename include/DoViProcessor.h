@@ -32,8 +32,9 @@ public:
   void setNlqProof(bool set = true) { nlqProof = set; }
   inline void setTrim(uint16_t trimPq, float targetMinNits, float targetMaxNits);
 
-  bool intializeFrame(int frame, IScriptEnvironment* env);
+  bool intializeFrame(int frame, IScriptEnvironment* env, const uint8_t* rpubuf, size_t rpusize);
   inline int getClipLength() const { return rpus->len; }
+  inline bool isIntegratedRpu() const { return !rpus; }
   inline bool isFEL() const { return is_fel; }
   inline bool isSceneChange() const { return scene_refresh_flag; }
   inline bool isLimitedRangeOutput() const { return !signal_full_range_flag; }
