@@ -78,6 +78,8 @@ DoViBaker<quarterResolutionEl>::DoViBaker(
 	// set the output pixel type
 	if (!outYUV)
 		vi.pixel_type = VideoInfo::CS_RGBP16;
+	else if (blContainerBits < 16)
+		vi.pixel_type = (vi.Is420()) ? VideoInfo::CS_YUV420P16 : VideoInfo::CS_YUV444P16;
 
 	CPU_FLAG = env->GetCPUFlags();
 	int lutMaxCpuCaps = INT_MAX;
@@ -655,8 +657,9 @@ PVideoFrame DoViBaker<quarterResolutionEl>::GetFrame(int n, IScriptEnvironment* 
 	PVideoFrame blSrc = child->GetFrame(n, env);
 	PVideoFrame elSrc = elChild ? elChild->GetFrame(n, env) : blSrc;
 	PVideoFrame dst;
-	if (!outYUV)
+	if (!outYUV) {
 		dst = env->NewVideoFrameP(vi, &blSrc);
+	}
 
 	const char* rpubuf = 0x0;
 	size_t rpusize = 0;
@@ -669,7 +672,7 @@ PVideoFrame DoViBaker<quarterResolutionEl>::GetFrame(int n, IScriptEnvironment* 
 		else if (env->propNumElements(env->getFramePropsRO(elSrc), "DolbyVisionRPU") > -1) {
 			rpubuf = env->propGetData(env->getFramePropsRO(elSrc), "DolbyVisionRPU", 0, 0);
 			rpusize = env->propGetDataSize(env->getFramePropsRO(elSrc), "DolbyVisionRPU", 0, 0);
-		}    
+		}
 	}
 	
 	bool doviInitialized = doviProc->intializeFrame(n, env, (const uint8_t*)rpubuf, rpusize);
