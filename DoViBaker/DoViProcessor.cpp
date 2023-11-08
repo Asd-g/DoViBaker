@@ -5,7 +5,7 @@
 #include "DoViProcessor.h"
 
 
-DoViProcessor::DoViProcessor(const char* rpuPath, IScriptEnvironment* env, uint8_t blContainerBits, uint8_t elContainerBits)
+DoViProcessor::DoViProcessor(const char* rpuPath, IScriptEnvironment* env, uint8_t blContainerBits, uint8_t elContainerBits, const int _sourceProfile)
 	: successfulCreation(false)
 	, rgbProof(false)
 	, nlqProof(false)
@@ -16,8 +16,9 @@ DoViProcessor::DoViProcessor(const char* rpuPath, IScriptEnvironment* env, uint8
 	, static_max_pq(0)
 	, static_max_content_light_level(0)
 	, static_max_avg_content_light_level(0)
-  , static_master_display_max_luminance(0)
-  , static_master_display_min_luminance(0)
+    , static_master_display_max_luminance(0)
+    , static_master_display_min_luminance(0)
+	, sourceProfile(_sourceProfile)
 {
 	ycc_to_rgb_coef[0] = 8192;
 	ycc_to_rgb_coef[1] = 0;
@@ -86,6 +87,10 @@ bool DoViProcessor::intializeFrame(int frame, IScriptEnvironment* env, const uin
 		const char* error = dovi_rpu_get_error(rpu);
 		showMessage((std::string("DoViBaker: ") + error).c_str(), env);
 		return false;
+	}
+
+	if (header->guessed_profile != sourceProfile) {
+		showMessage("DoViBaker: sourceProfile is different than the RPU profile.", env);
 	}
 
 	const DoviRpuDataMapping* mapping_data = dovi_rpu_get_data_mapping(rpu);
